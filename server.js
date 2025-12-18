@@ -1,5 +1,7 @@
 const express = require("express");
-const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+const fetch = require("node-fetch");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -7,65 +9,94 @@ const PORT = process.env.PORT || 3000;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHANNEL = process.env.CHANNEL;
 
-let posts = [];
+const DATA_FILE = path.join(__dirname, "data.json");
 
-/* 🔓 CORS */
+/* ---------- CORS ---------- */
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   next();
 });
 
-/* 🔧 TEXT CLEANER */
+app.use(express.json());
+
+/* ---------- Utils ---------- */
+
+// format telegram text nicely
 function formatText(text = "") {
-  return text
-    .replace(/\r\n/g, "\n")
-    .replace(/\n{2,}/g, "\n\n")
-    .trim();
+  // split by line breaks
+  let lines = text
+    .split(/\n+/)
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  return lines.join("\n\n"); // spacing between paragraphs
 }
 
-/* 📡 TELEGRAM FETCH */
-async function fetchUpdates() {
-  try {
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`;
-    const res = await axios.get(url);
+// extract all links from text
+function extractLinks(text = "") {
+  const regex = /(https?:\/\/[^\s]+)/g;
+  return text.match(regex) || [];
+}
 
-    posts = [];
-
-    for (let u of res.data.result.reverse()) {
-      const msg = u.channel_post;
-      if (!msg || msg.chat.username !== CHANNEL) continue;
-
-      let image = null;
-      if (msg.photo) {
-        const fileId = msg.photo[msg.photo.length - 1].file_id;
-        const file = await axios.get(
-          `https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`
-        );
-        image = `https://api.telegram.org/file/bot${BOT_TOKEN}/${file.data.result.file_path}`;
-      }
-
-      posts.push({
-        date: new Date(msg.date * 1000).toISOString(),
-        text: formatText(msg.text || msg.caption || ""),
-        image,
-        link: `https://t.me/${CHANNEL}/${msg.message_id}`,
-      });
-    }
-  } catch (err) {
-    console.log("Fetch error:", err.message);
+/* ---------- Save message ---------- */
+function savePost(post) {
+  let data = [];
+  if (fs.existsSync(DATA_FILE)) {
+    data = JSON.parse(fs.readFileSync(DATA_FILE));
   }
+  data.unshift(post); // latest first
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-/* ⏱ AUTO REFRESH */
-setInterval(fetchUpdates, 5000);
-fetchUpdates();
+/* ---------- Telegram Webhook ---------- */
+app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
+  try {
+    const msg = req.body.message || req.body.channel_post;
+    if (!msg || !msg.text && !msg.caption) return res.send("OK");
 
-/* 📤 API */
-app.get("/data", (req, res) => {
-  res.json(posts);
+    const rawText = msg.text || msg.caption;
+    const cleanText = formatText(rawText);
+    const links = extractLinks(rawText);
+
+    let image = null;
+
+    if (msg.photo) {
+      const fileId = msg.photo[msg.photo.length - 1].file_id;
+      const fileRes = await fetch(
+        `https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`
+      );
+      const fileData = await fileRes.json();
+      image = `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileData.result.file_path}`;
+    }
+
+    const post = {
+      date: new Date(msg.date * 1000).toISOString(),
+      text: cleanText,
+      links,
+      image,
+      telegram_link: `https://t.me/${CHANNEL}/${msg.message_id}`
+    };
+
+    savePost(post);
+    res.send("OK");
+  } catch (e) {
+    console.error(e);
+    res.send("ERROR");
+  }
 });
 
-/* 🟢 START */
+/* ---------- Data API ---------- */
+app.get("/data", (req, res) => {
+  if (!fs.existsSync(DATA_FILE)) return res.json([]);
+  const data = JSON.parse(fs.readFileSync(DATA_FILE));
+  res.json(data);
+});
+
+/* ---------- Health ---------- */
+app.get("/", (req, res) => {
+  res.send("Telegram Server Running ✅");
+});
+
 app.listen(PORT, () => {
   console.log("Server running on", PORT);
 });
