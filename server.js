@@ -1,86 +1,73 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
+const fetch = require("node-fetch");
 
-// node 18+ me fetch already hota hai
 const app = express();
-app.use(express.json());
 
-// 🔓 CORS (Vercel / GitHub Pages ke liye)
+// ====== ENV ======
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const CHANNEL = process.env.CHANNEL; // without @
+
+// ====== CORS FIX ======
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "*");
   next();
 });
 
-const DATA_FILE = path.join(__dirname, "data.json");
+let POSTS = [];
 
-// data.json create agar na ho
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, "[]");
+// ====== TEXT FORMATTER ======
+function formatText(text = "") {
+  return text
+    .replace(/\n+/g, "\n\n") // extra line breaks clean
+    .replace(/Download link\s*:-/gi, "\nDownload link :-")
+    .replace(/Share & Support Us/gi, "\n🔺 Share & Support Us 🔻\n")
+    .replace(/@/g, "➖ @")
+    .trim();
 }
 
-// 🔗 Telegram file URL nikalne ka helper
-async function getFileUrl(fileId) {
-  const r = await fetch(
-    `https://api.telegram.org/bot${process.env.BOT_TOKEN}/getFile?file_id=${fileId}`
-  );
-  const j = await r.json();
-  return `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${j.result.file_path}`;
-}
-
-// 🔔 WEBHOOK
-app.post("/webhook", async (req, res) => {
+// ====== TELEGRAM FETCH ======
+async function fetchTelegram() {
   try {
-    const msg = req.body.message || req.body.channel_post;
-    if (!msg) return res.send("ignored");
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`;
+    const res = await fetch(url);
+    const data = await res.json();
 
-    const posts = JSON.parse(fs.readFileSync(DATA_FILE));
+    if (!data.ok) return;
 
-    let post = {
-      date: new Date(msg.date * 1000).toISOString(),
-      link: `https://t.me/${process.env.CHANNEL}/${msg.message_id}`,
-      text: msg.text || msg.caption || "",
-      type: "text"
-    };
+    const messages = data.result
+      .map(u => u.channel_post)
+      .filter(Boolean)
+      .filter(m => m.chat.username === CHANNEL)
+      .slice(-10)
+      .reverse();
 
-    // 🖼️ IMAGE
-    if (msg.photo) {
-      post.type = "photo";
-      post.file = await getFileUrl(
-        msg.photo[msg.photo.length - 1].file_id
-      );
-    }
+    POSTS = messages.map(m => ({
+      text: formatText(m.caption || m.text || ""),
+      image: m.photo
+        ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${
+            m.photo[m.photo.length - 1].file_id
+          }`
+        : null,
+      date: new Date(m.date * 1000).toISOString(),
+      link: `https://t.me/${CHANNEL}/${m.message_id}`
+    }));
 
-    // 🎥 VIDEO
-    if (msg.video) {
-      post.type = "video";
-      post.file = await getFileUrl(msg.video.file_id);
-    }
-
-    // latest post upar
-    posts.unshift(post);
-
-    // sirf last 50 posts rakho
-    fs.writeFileSync(DATA_FILE, JSON.stringify(posts.slice(0, 50), null, 2));
-
-    res.send("ok");
-  } catch (e) {
-    console.error(e);
-    res.send("error");
+  } catch (err) {
+    console.error("Telegram fetch error:", err.message);
   }
-});
+}
 
-// 📦 DATA API (frontend yahin se fetch karega)
+// ====== AUTO REFRESH ======
+setInterval(fetchTelegram, 10000);
+fetchTelegram();
+
+// ====== API ======
 app.get("/data", (req, res) => {
-  const posts = JSON.parse(fs.readFileSync(DATA_FILE));
-  res.json(posts);
+  res.json(POSTS);
 });
 
-// health check
-app.get("/", (req, res) => {
-  res.send("Telegram bot server running ✅");
-});
-
+// ====== SERVER ======
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
