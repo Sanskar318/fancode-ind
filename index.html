@@ -1,100 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Telegram Live Updates</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
-    }
-    header {
-      padding: 16px;
-      font-size: 22px;
-      font-weight: bold;
-      background: #020617;
-      border-bottom: 1px solid #1e293b;
-    }
-    #posts {
-      padding: 16px;
-    }
-    .post {
-      background: #020617;
-      border: 1px solid #1e293b;
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 12px;
-    }
-    .date {
-      font-size: 12px;
-      color: #94a3b8;
-      margin-top: 6px;
-    }
-    a {
-      color: #38bdf8;
-      text-decoration: none;
-      font-size: 14px;
-    }
-    .status {
-      text-align: center;
-      color: #94a3b8;
-      margin-top: 30px;
-    }
-  </style>
-</head>
-
+<html>
 <body>
 
-<header>📢 Telegram Live Updates</header>
-
-<!-- 🔴 THIS DIV WAS THE REAL ISSUE -->
-<div id="posts">
-  <div class="status">Loading posts…</div>
-</div>
+<h3>Frontend Test</h3>
+<pre id="out">Waiting...</pre>
 
 <script>
-  const API_URL = "https://telegram-bot-server-hdja.onrender.com/data";
-
-  async function loadPosts() {
-    const container = document.getElementById("posts");
-
-    try {
-      const res = await fetch(API_URL, {
-        cache: "no-store"
-      });
-
-      const data = await res.json();
-
-      if (!Array.isArray(data) || data.length === 0) {
-        container.innerHTML = '<div class="status">No posts yet</div>';
-        return;
-      }
-
-      container.innerHTML = "";
-
-      data.reverse().forEach(post => {
-        const div = document.createElement("div");
-        div.className = "post";
-        div.innerHTML = `
-          <div>${post.text}</div>
-          <div class="date">${new Date(post.date).toLocaleString()}</div>
-          <a href="${post.link}" target="_blank">Open in Telegram</a>
-        `;
-        container.appendChild(div);
-      });
-
-    } catch (e) {
-      container.innerHTML = '<div class="status">Failed to load posts</div>';
-      console.error(e);
-    }
-  }
-
-  loadPosts();
-  setInterval(loadPosts, 10000);
+fetch("https://telegram-bot-server-hdja.onrender.com/data", {
+  cache: "no-store"
+})
+.then(r => r.text())
+.then(t => document.getElementById("out").innerText = t)
+.catch(e => document.getElementById("out").innerText = "ERROR: " + e);
 </script>
 
 </body>
