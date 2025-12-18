@@ -65,36 +65,50 @@
     container.innerHTML = `<div class="status">Loading posts…</div>`;
 
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(API_URL, {
+        method: "GET",
+        mode: "cors",
+        cache: "no-store",
+        headers: {
+          "Accept": "application/json"
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error("Network response was not ok");
+      }
+
       const data = await res.json();
 
-      if (!data || data.length === 0) {
+      if (!Array.isArray(data) || data.length === 0) {
         container.innerHTML = `<div class="status">No posts yet</div>`;
         return;
       }
 
       container.innerHTML = "";
 
-      data.reverse().forEach(post => {
+      data.slice().reverse().forEach(post => {
         const div = document.createElement("div");
         div.className = "post";
         div.innerHTML = `
           <div>${post.text}</div>
           <div class="date">${new Date(post.date).toLocaleString()}</div>
-          <div><a href="${post.link}" target="_blank">Open in Telegram</a></div>
+          <div>
+            <a href="${post.link}" target="_blank">Open in Telegram</a>
+          </div>
         `;
         container.appendChild(div);
       });
 
-    } catch (err) {
+    } catch (error) {
+      console.error("FETCH ERROR:", error);
       container.innerHTML = `<div class="status">Failed to load posts</div>`;
-      console.error(err);
     }
   }
 
   loadPosts();
-  setInterval(loadPosts, 10000); // auto refresh every 10 sec
-</script>
+  setInterval(loadPosts, 10000);
+      </script>
 
 </body>
 </html>
