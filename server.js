@@ -3,72 +3,48 @@ const fs = require("fs");
 const path = require("path");
 
 const app = express();
+app.use(express.json());
 
-/* =========================
-   ✅ CORS (FINAL FIX)
-========================= */
+// ✅ CORS (MOST IMPORTANT)
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Accept");
-  if (req.method === "OPTIONS") return res.sendStatus(200);
+  res.setHeader("Access-Control-Allow-Origin", "*");
   next();
 });
 
-app.use(express.json());
+const DATA_FILE = path.join(__dirname, "data.json");
 
-/* =========================
-   📁 DATA FILE
-========================= */
-const DATA_FILE = path.join(__dirname, "posts.json");
-
+// Init file
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, "[]");
 }
 
-/* =========================
-   🔔 TELEGRAM WEBHOOK
-========================= */
+// 🔹 Webhook endpoint
 app.post("/webhook", (req, res) => {
-  try {
-    const msg = req.body.channel_post;
-    if (!msg) return res.sendStatus(200);
+  const msg = req.body.message || req.body.channel_post;
+  if (!msg || !msg.text) return res.send("ignored");
 
-    const posts = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+  const posts = JSON.parse(fs.readFileSync(DATA_FILE));
 
-    posts.push({
-      text: msg.text || msg.caption || "",
-      date: new Date().toISOString(),
-      link: `https://t.me/${process.env.CHANNEL}/${msg.message_id}`
-    });
+  posts.unshift({
+    text: msg.text,
+    date: new Date(msg.date * 1000).toISOString(),
+    link: `https://t.me/${process.env.CHANNEL}/${msg.message_id}`
+  });
 
-    // sirf last 50 posts rakho
-    if (posts.length > 50) posts.shift();
-
-    fs.writeFileSync(DATA_FILE, JSON.stringify(posts, null, 2));
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("Webhook error:", err);
-    res.sendStatus(500);
-  }
+  fs.writeFileSync(DATA_FILE, JSON.stringify(posts.slice(0, 50)));
+  res.send("ok");
 });
 
-/* =========================
-   🌐 PUBLIC API
-========================= */
+// 🔹 API for website
 app.get("/data", (req, res) => {
-  try {
-    const posts = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    res.json(posts);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to read data" });
-  }
+  const posts = JSON.parse(fs.readFileSync(DATA_FILE));
+  res.json(posts);
 });
 
-/* =========================
-   🚀 START SERVER
-========================= */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+// 🔹 Health check
+app.get("/", (req, res) => {
+  res.send("Telegram bot server running");
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Server running"));
