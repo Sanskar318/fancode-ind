@@ -1,1 +1,97 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel – CricTV Demo</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+:root{
+  --bg:#020617;
+  --sidebar:#020617;
+  --card:#0f172a;
+  --accent:#38bdf8;
+  --danger:#ef4444;
+  --success:#22c55e;
+  --text:#f8fafc;
+  --muted:#94a3b8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  min-height:100vh;
+}/* SIDEBAR */ .sidebar{ width:240px; background:linear-gradient(180deg,#020617,#020617,#020617); border-right:1px solid rgba(255,255,255,0.08); padding:20px 15px; } .sidebar h2{ font-size:18px; margin-bottom:25px; text-align:center; color:var(--accent); } .menu a{ display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; color:var(--text); text-decoration:none; margin-bottom:8px; font-size:14px; } .menu a:hover, .menu a.active{ background:rgba(56,189,248,0.15); }
 
+/* MAIN */ .main{ flex:1; padding:25px; }
+
+/* HEADER */ .header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; } .header h1{font-size:22px} .profile{ display:flex; align-items:center; gap:10px; font-size:14px; } .profile img{ width:36px;height:36px;border-radius:50%;background:#fff; }
+
+/* STATS */ .stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:18px; margin-bottom:30px; } .stat{ background:var(--card); border-radius:14px; padding:18px; box-shadow:0 6px 18px rgba(0,0,0,0.4); } .stat h3{font-size:14px;color:var(--muted)} .stat p{font-size:26px;font-weight:bold;margin-top:8px}
+
+/* TABLE */ .card{ background:var(--card); border-radius:14px; padding:20px; box-shadow:0 6px 18px rgba(0,0,0,0.4); } .card h2{font-size:18px;margin-bottom:15px}
+
+.table{ width:100%; border-collapse:collapse; font-size:14px; } .table th,.table td{ padding:12px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); } .table th{color:var(--muted)}
+
+.badge{ padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold; } .live{background:rgba(34,197,94,0.2);color:var(--success)} .off{background:rgba(239,68,68,0.2);color:var(--danger)}
+
+.action-btn{ border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; } .on{background:var(--success);color:black} .offbtn{background:var(--danger);color:white}
+
+/* RESPONSIVE */ @media(max-width:768px){ .sidebar{display:none} } </style>
+
+</head>
+<body><!-- SIDEBAR --><div class="sidebar">
+  <h2>ADMIN PANEL</h2>
+  <div class="menu">
+    <a class="active"><span class="material-icons">dashboard</span>Dashboard</a>
+    <a><span class="material-icons">live_tv</span>Matches</a>
+    <a><span class="material-icons">people</span>Users</a>
+    <a><span class="material-icons">settings</span>Settings</a>
+    <a><span class="material-icons">logout</span>Logout</a>
+  </div>
+</div><!-- MAIN --><div class="main">  <div class="header">
+    <h1>Dashboard</h1>
+    <div class="profile">
+      <span>Admin</span>
+      <img src="https://Sanskar.illegal.com/avatar.png">
+    </div>
+  </div>  <!-- STATS -->  <div class="stats">
+    <div class="stat"><h3>Total Matches</h3><p>18</p></div>
+    <div class="stat"><h3>Live Matches</h3><p>5</p></div>
+    <div class="stat"><h3>Registered Users</h3><p>1,240</p></div>
+    <div class="stat"><h3>Active Users</h3><p>312</p></div>
+  </div>  <!-- MATCH TABLE -->  <div class="card">
+    <h2>Manage Matches</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Match</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Team A vs Team B</td>
+          <td>FanCode</td>
+          <td><span class="badge live">LIVE</span></td>
+          <td><button class="action-btn offbtn">Disable</button></td>
+        </tr>
+        <tr>
+          <td>Team C vs Team D</td>
+          <td>Sony LIV</td>
+          <td><span class="badge off">OFF</span></td>
+          <td><button class="action-btn on">Enable</button></td>
+        </tr>
+        <tr>
+          <td>Team E vs Team F</td>
+          <td>FanCode</td>
+          <td><span class="badge live">LIVE</span></td>
+          <td><button class="action-btn offbtn">Disable</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div></div></body>
+  </html>
