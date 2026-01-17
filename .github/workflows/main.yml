@@ -10,7 +10,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Setup PHP
@@ -21,9 +21,9 @@ jobs:
       - name: Fetch and Update Data
         run: php api/fetcher.php > live_data.json
 
-      - name: Commit and Push Changes
+      - name: Commit and Push
         run: |
-          git config --global user.name "FanCode-Ind-Bot"
+          git config --global user.name "FanCode-Bot"
           git config --global user.email "bot@fancode.com"
           git add live_data.json
           git commit -m "Auto Update: $(date)" || exit 0
