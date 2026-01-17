@@ -2,28 +2,33 @@
 header('Content-Type: application/json; charset=utf-8');
 header("Access-Control-Allow-Origin: *");
 
-// Apni hi repo ki file padhna
 $file = '../matches.json';
 if (!file_exists($file)) {
-    echo json_encode(["status" => "error", "message" => "File not found"]);
+    echo json_encode(["status" => "error", "matches" => []]);
     exit;
 }
 
 $raw = json_decode(file_get_contents($file), true);
 $matches = [];
 
-if (isset($raw['data']['sections'])) {
-    foreach ($raw['data']['sections'] as $section) {
-        if (isset($section['items'])) {
-            foreach ($section['items'] as $item) {
-                if (isset($item['match_id'])) {
-                    $matches[] = [
-                        "title" => $item['name'] ?? $item['title'],
-                        "src" => $item['posterUrl'],
-                        "status" => ($item['is_live']) ? "LIVE" : "UPCOMING",
-                        "match_id" => (int)$item['match_id'],
-                        "adfree_url" => "api/stream.php?id=" . $item['match_id'] . "&ext=.m3u8"
-                    ];
+// App API parsing logic
+if (isset($raw['data']['layout'])) {
+    foreach ($raw['data']['layout'] as $section) {
+        if (isset($section['widgets'])) {
+            foreach ($section['widgets'] as $widget) {
+                if (isset($widget['items'])) {
+                    foreach ($widget['items'] as $item) {
+                        $id = $item['match_id'] ?? $item['id'];
+                        if ($id) {
+                            $matches[] = [
+                                "title" => $item['name'] ?? $item['title'],
+                                "src" => $item['posterUrl'] ?? $item['image_url'],
+                                "status" => ($item['is_live'] == true) ? "LIVE" : "UPCOMING",
+                                "match_id" => (int)$id,
+                                "adfree_url" => "api/stream.php?id=" . $id . "&ext=.m3u8"
+                            ];
+                        }
+                    }
                 }
             }
         }
