@@ -1,4 +1,4 @@
-name: Update FanCode Links
+name: FanCode Auto Update
 on:
   schedule:
     - cron: '*/30 * * * *'
@@ -10,7 +10,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Setup PHP
@@ -18,14 +18,14 @@ jobs:
         with:
           php-version: '8.1'
 
-      - name: Fetch and Save
+      - name: Fetch and Update Data
         run: php api/fetcher.php > live_data.json
 
-      - name: Auto Push
+      - name: Commit and Push Changes
         run: |
-          git config --global user.name "Fancode-Ind-Bot"
+          git config --global user.name "FanCode-Ind-Bot"
           git config --global user.email "bot@fancode.com"
           git add live_data.json
-          git commit -m "Updated m3u8 links: $(date)" || exit 0
+          git commit -m "Auto Update: $(date)" || exit 0
           git push
           
