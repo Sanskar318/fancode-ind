@@ -1,84 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FanCode Data Monitor</title>
+    <title>Sanskar OTT - FanCode Live</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; text-align: center; padding: 20px; }
-        .status-box { background: #1e1e1e; padding: 20px; border-radius: 10px; display: inline-block; margin-bottom: 20px; border: 1px solid #333; }
-        .green { color: #4caf50; font-weight: bold; }
-        .red { color: #f44336; font-weight: bold; }
-        .match-card { background: #252525; margin: 10px auto; padding: 15px; border-radius: 8px; max-width: 500px; text-align: left; border-left: 5px solid #007bff; }
-        .match-card img { width: 100%; border-radius: 5px; margin-bottom: 10px; }
-        .update-time { font-size: 0.8em; color: #888; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
-        pre { background: #000; padding: 10px; text-align: left; overflow-x: auto; font-size: 12px; border-radius: 5px; }
+        body { background-color: #0f172a; color: white; }
+        .match-card { transition: transform 0.3s; border: 1px solid #1e293b; }
+        .match-card:hover { transform: scale(1.05); border-color: #3b82f6; }
+        .live-badge { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
-<body>
+<body class="p-4 md:p-8">
 
-    <h1>FanCode Data Monitor</h1>
-    
-    <div class="status-box" id="status-container">
-        <p>Checking JSON Data...</p>
+    <header class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
+        <h1 class="text-2xl font-bold text-blue-500"><i class="fa-solid fa-bolt mr-2"></i>SANSKAR OTT</h1>
+        <div id="status-dot" class="flex items-center text-sm text-slate-400">
+            <span id="update-time">Checking...</span>
+        </div>
+    </header>
+
+    <div id="error-container" class="hidden text-center py-20">
+        <i class="fa-solid fa-triangle-exclamation text-5xl text-yellow-500 mb-4"></i>
+        <h2 class="text-xl font-semibold">Abhi koi match live nahi hai</h2>
+        <p class="text-slate-400 mt-2">Jaise hi FanCode par match shuru hoga, yahan dikh jayega.</p>
+        <button onclick="fetchData()" class="mt-6 bg-blue-600 px-6 py-2 rounded-full hover:bg-blue-700">Refresh Karein</button>
     </div>
 
-    <div id="data-view">
-        <p>Last Update: <span id="time" class="update-time">-</span></p>
-        <div id="match-list"></div>
-    </div>
-
-    <hr style="border: 0.5px solid #333; margin: 40px 0;">
-    <h3>Raw JSON Output (For Debugging)</h3>
-    <pre id="raw-json">Loading raw data...</pre>
+    <div id="match-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        </div>
 
     <script>
-        function checkData() {
-            const statusBox = document.getElementById('status-container');
-            const matchList = document.getElementById('match-list');
-            const rawJson = document.getElementById('raw-json');
-            const timeSpan = document.getElementById('time');
+        async function fetchData() {
+            const grid = document.getElementById('match-grid');
+            const errorContainer = document.getElementById('error-container');
+            const timeSpan = document.getElementById('update-time');
 
-            // live_data.json fetch kar rahe hain
-            fetch('live_data.json?t=' + new Date().getTime())
-            .then(response => response.json())
-            .then(data => {
-                // Raw JSON dikhao
-                rawJson.textContent = JSON.stringify(data, null, 4);
-                timeSpan.textContent = data["last update time"] || "Unknown";
-
-                if (data.matches && data.matches.length > 0) {
-                    statusBox.innerHTML = `<p class="green">✔ SUCCESS: Found ${data.matches.length} matches!</p>`;
-                    
-                    let html = '';
-                    data.matches.forEach(m => {
-                        html += `
-                            <div class="match-card">
-                                <img src="${m.src}" alt="poster">
-                                <strong>${m.title}</strong><br>
-                                <small>Category: ${m.event_category} | ID: ${m.match_id}</small><br>
-                                <span class="${m.status === 'LIVE' ? 'green' : ''}">Status: ${m.status}</span><br>
-                                <a href="${m.adfree_url}" target="_blank" style="color:cyan; font-size:12px;">Test m3u8 Link</a>
-                            </div>
-                        `;
-                    });
-                    matchList.innerHTML = html;
+            try {
+                const response = await fetch('live_data.json?t=' + Date.now());
+                const data = await response.json();
+                
+                timeSpan.innerText = "Last Update: " + (data['last update time'] || "N/A");
+                
+                if (!data.matches || data.matches.length === 0) {
+                    grid.innerHTML = '';
+                    errorContainer.classList.remove('hidden');
                 } else {
-                    statusBox.innerHTML = `<p class="red">✖ ERROR: Matches array is EMPTY []</p>
-                    <small>Script chal gayi par FanCode ne data nahi bheja.</small>`;
-                    matchList.innerHTML = '';
+                    errorContainer.classList.add('hidden');
+                    grid.innerHTML = data.matches.map(match => `
+                        <div class="match-card bg-slate-800 rounded-xl overflow-hidden shadow-lg">
+                            <div class="relative">
+                                <img src="${match.src}" class="w-full h-48 object-cover">
+                                ${match.status === 'LIVE' ? '<span class="live-badge absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold italic text-sm">● LIVE</span>' : ''}
+                                <span class="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded">${match.event_category}</span>
+                            </div>
+                            <div class="p-4">
+                                <h3 class="font-bold text-sm line-clamp-2 mb-2 h-10">${match.title}</h3>
+                                <div class="flex justify-between items-center mt-4">
+                                    <span class="text-xs text-slate-400"><i class="fa-regular fa-clock mr-1"></i> ${match.startTime.split(' ')[0]}</span>
+                                    <a href="${match.adfree_url}" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 py-2 rounded-lg font-bold transition">WATCH NOW</a>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
                 }
-            })
-            .catch(err => {
-                statusBox.innerHTML = `<p class="red">✖ CRITICAL ERROR: Could not load live_data.json</p>`;
-                rawJson.textContent = "Error: " + err.message;
-            });
+            } catch (error) {
+                console.error("Error loading data:", error);
+                errorContainer.classList.remove('hidden');
+            }
         }
 
-        // Auto refresh every 30 seconds
-        checkData();
-        setInterval(checkData, 30000);
+        fetchData();
+        setInterval(fetchData, 60000); // Har minute refresh
     </script>
 </body>
 </html>
