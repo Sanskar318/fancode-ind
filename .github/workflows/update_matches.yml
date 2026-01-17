@@ -12,20 +12,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Fetch Data using Advanced Headers
+      - name: Fetch Data from Mobile API
         run: |
-          curl -L -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-               -H "X-Platform: web" \
-               -H "Origin: https://www.fancode.com" \
-               -H "Referer: https://www.fancode.com/" \
-               -H "Accept: application/json" \
-               "https://www.fancode.com/api/v1/content/home?section=all" > matches.json
+          curl -L "https://www.fancode.com/api/v1/content/discover/sports-home" \
+          -H "User-Agent: FanCode/3.15.0 (Android 12; Pixel 6)" \
+          -H "X-Platform: android" \
+          -H "X-Client: mobile" \
+          -H "Accept: application/json" \
+          -H "Connection: keep-alive" > matches.json
           
-      - name: Commit and Push changes
+      - name: Commit and Push
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add matches.json
-          git commit -m "Automated Match Update" || echo "No changes to commit"
+          git commit -m "Bypass Update" || echo "No changes"
           git push origin main
           
