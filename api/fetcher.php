@@ -3,60 +3,59 @@ error_reporting(0);
 header('Content-Type: application/json');
 
 function getFancodeData() {
-    // FanCode Mobile Discover API - Yeh hamesha data deti hai
-    $url = "https://www.fancode.com/api/v1/content/discover/sports-home";
+    // FanCode GraphQL API - Yeh sabse reliable source hai
+    $url = "https://www.fancode.com/api/v1/content/home?section=all";
     
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_USERAGENT, "FanCode/3.14.0 (Android 11; Pixel 4 XL)"); // Mobile UA use kar rahe hain
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    // Rotating User-Agent to avoid bot detection
+    curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Linux; Android 10; SM-G960F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36");
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "X-Platform: android",
-        "X-Client: mobile",
-        "Origin: https://www.fancode.com"
+        "Origin: https://www.fancode.com",
+        "Referer: https://www.fancode.com/",
+        "Accept: application/json",
+        "X-Platform: web"
     ]);
     
     $res = curl_exec($ch);
     curl_close($ch);
     
+    if(!$res) return [];
+
     $raw = json_decode($res, true);
     $matches = [];
 
-    // Data parsing for drmlive format
-    if (isset($raw['data']['layout'])) {
-        foreach ($raw['data']['layout'] as $section) {
-            if (isset($section['widgets'])) {
-                foreach ($section['widgets'] as $widget) {
-                    if (isset($widget['items'])) {
-                        foreach ($widget['items'] as $item) {
-                            // Sirf Match items uthana
-                            if (isset($item['match_id']) || $item['type'] == 'MATCH') {
-                                $m_id = $item['id'] ?? $item['match_id'];
-                                $matches[] = [
-                                    "event_category" => $item['category_name'] ?? "Sports",
-                                    "title" => $item['name'] ?? $item['title'],
-                                    "src" => $item['posterUrl'] ?? $item['image_url'],
-                                    "team_1" => $item['team1_name'] ?? "",
-                                    "team_2" => $item['team2_name'] ?? "",
-                                    "status" => ($item['is_live'] || $item['status'] == 'LIVE') ? "LIVE" : "UPCOMING",
-                                    "event_name" => $item['event_name'] ?? "",
-                                    "match_name" => $item['name'] ?? "",
-                                    "match_id" => (int)$m_id,
-                                    "startTime" => date("h:i:s A d-m-Y", ($item['startTime'] / 1000)),
-                                    "dai_url" => "https://dai.google.com/linear/hls/event/sid/master.m3u8",
-                                    "adfree_url" => "https://fancode-ind.vercel.app/api/stream.php?id=" . $m_id . "&ext=.m3u8"
-                                ];
-                            }
-                        }
+    // FanCode raw data structure parsing
+    if (isset($raw['data']['sections'])) {
+        foreach ($raw['data']['sections'] as $section) {
+            if (isset($section['items'])) {
+                foreach ($section['items'] as $item) {
+                    // Filter for matches only
+                    if (isset($item['match_id']) || (isset($item['type']) && $item['type'] == 'MATCH')) {
+                        $m_id = $item['id'] ?? $item['match_id'];
+                        $matches[] = [
+                            "event_category" => $item['category_name'] ?? "Sports",
+                            "title" => $item['name'] ?? $item['title'],
+                            "src" => $item['posterUrl'] ?? $item['image_url'],
+                            "team_1" => $item['team1_name'] ?? "",
+                            "team_2" => $item['team2_name'] ?? "",
+                            "status" => ($item['is_live'] || $item['status'] == 'LIVE') ? "LIVE" : "UPCOMING",
+                            "event_name" => $item['event_name'] ?? "",
+                            "match_name" => $item['name'] ?? "",
+                            "match_id" => (int)$m_id,
+                            "startTime" => date("h:i:s A d-m-Y", ($item['startTime'] / 1000)),
+                            "dai_url" => "https://dai.google.com/linear/hls/event/sid/master.m3u8",
+                            "adfree_url" => "https://fancode-ind.vercel.app/api/stream.php?id=" . $m_id . "&ext=.m3u8"
+                        ];
                     }
                 }
             }
         }
     }
     
-    // Duplicate matches hatane ke liye
-    $unique_matches = array_values(array_column($matches, null, 'match_id'));
-    return $unique_matches;
+    // Duplicate remove and sorting
+    return array_values(array_column($matches, null, 'match_id'));
 }
 
 $output = [
