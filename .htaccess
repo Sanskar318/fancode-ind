@@ -1,0 +1,10 @@
+RewriteEngine On
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule ^playlist\.m3u$ playlist.php [L]
+RewriteRule ^([a-zA-Z0-9_-]+)/lic/?$ key.php?id=$1 [QSA,L]
+RewriteRule ^([a-zA-Z0-9_-]+)/manifest\.mpd/?$ manifest.php?id=$1 [QSA,L]
+RewriteRule ^([a-zA-Z0-9_-]+)/segments/(.+)$ manifest.php?id=$1&segment=$2 [QSA,L]
